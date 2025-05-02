@@ -59,7 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👥 Приглашённые", callback_data='myrefs')],
         [InlineKeyboardButton("🏆 Топ", callback_data='top')]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+   reply_markup = InlineKeyboardMarkup(keyboard)
 
     caption = (
         f"⭐️ Добро пожаловать в XP STARS, {name}!\n\n"
