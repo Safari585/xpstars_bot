@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes,CallbackQueryHa>
+from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 import sqlite3
 
 # Подключение к базе данных
