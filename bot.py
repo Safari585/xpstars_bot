@@ -172,7 +172,7 @@ if __name__ == "__main__":
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = "7626933309:AAHxvlLp-YnIK1hcxyDJiQaAItKA_c9CH6M"
+app = Application.builder().token("7626933309:AAHxvlLp-YnIK1hcxyDJiQaAItKA_c9C").build()
 
 # Команда для стартового сообщения с кнопками
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
