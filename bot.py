@@ -32,7 +32,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     name = user.full_name
     args = context.args
-    referrer = int(args[0]) if args else None
+    try:
+        referrer = int(args[0]) if args else None
+    except ValueError:
+        referrer = None
 
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     if cursor.fetchone() is None:
