@@ -114,7 +114,7 @@ async def myrefs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     cursor.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (user_id,))
     count = cursor.fetchone()[0]
-    await update.callback_query.message.reply_text(f"👥 Ты пригласил {count} челов>
+    await update.callback_query.message.reply_text(f"👥 Ты пригласил {count} человек")
 
 # Команда /top
 async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
