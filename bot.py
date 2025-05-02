@@ -1,6 +1,12 @@
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import sqlite3
+from dotenv import load_dotenv
+
+# Загрузка переменных из .env файла (например, для токена)
+load_dotenv()
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # Подключение к базе данных
 conn = sqlite3.connect("referrals.db", check_same_thread=False)
@@ -15,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-# Функция для определения ранга
+# Функция ранга
 def get_rank(points):
     if points >= 20:
         return "🌟 Легенда"
@@ -32,15 +38,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     name = user.full_name
     args = context.args
-    try:
-        referrer = int(args[0]) if args else None
-    except ValueError:
-        referrer = None
+    referrer = int(args[0]) if args else None
 
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     if cursor.fetchone() is None:
         cursor.execute(
-            "INSERT INTO users (user_id, referred_by, points, name) VALUES (?, ?, >"
+            "INSERT INTO users (user_id, referred_by, points, name) VALUES (?, ?, ?, ?)",
             (user_id, referrer, 0, name)
         )
         if referrer:
@@ -51,7 +54,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
 
     ref_link = f"https://t.me/XP_STARS_bot?start={user_id}"
-
     cursor.execute("SELECT points FROM users WHERE user_id = ?", (user_id,))
     points_result = cursor.fetchone()
     points = points_result[0] if points_result else 0
@@ -76,17 +78,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=caption,
             reply_markup=reply_markup
         )
-# Команда /help
+
+# /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "/start — начать и получить реф. ссылку\n"
-        "/profile — мой профиль\n"
-        "/myrefs — мои приглашённые\n"
-        "/top — топ по баллам\n"
+        "/start — начать\n"
+        "/profile — профиль\n"
+        "/myrefs — приглашённые\n"
+        "/top — топ\n"
         "/about — о боте"
     )
 
-# Команда /profile
+# /profile
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
@@ -95,28 +98,24 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = cursor.fetchone()
     points = result[0] if result else 0
     rank = get_rank(points)
+    msg = f"👤 Профиль: {name}\n🏅 Баллы: {points}\n🎖️ Ранг: {rank}"
     if update.callback_query:
-        await update.callback_query.answer()  # чтобы Telegram "закрыл" спиннер кн>
-        await update.callback_query.message.reply_text(
-            f"👤 Профиль: {name}\n"
-            f"🏅 Баллы: {points}\n"
-            f"🎖️ Ранг: {rank}"
-        )
+        await update.callback_query.message.reply_text(msg)
     else:
-        await update.message.reply_text(
-            f"👤 Профиль: {name}\n"
-            f"🏅 Баллы: {points}\n"
-            f"🎖️ Ранг: {rank}"
-        )
+        await update.message.reply_text(msg)
 
-# Команда /myrefs
+# /myrefs
 async def myrefs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     cursor.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (user_id,))
     count = cursor.fetchone()[0]
-    await update.callback_query.message.reply_text(f"👥 Ты пригласил {count} человек")
+    msg = f"👥 Ты пригласил {count} человек(а)."
+    if update.callback_query:
+        await update.callback_query.message.reply_text(msg)
+    else:
+        await update.message.reply_text(msg)
 
-# Команда /top
+# /top
 async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("SELECT name, points FROM users ORDER BY points DESC LIMIT 5")
     rows = cursor.fetchall()
@@ -126,23 +125,22 @@ async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"{i}. {name} — {pts} баллов ({rank})\n"
 
     if update.callback_query:
-        await update.callback_query.answer()
         await update.callback_query.message.reply_text(msg)
     else:
         await update.message.reply_text(msg)
 
-# Команда /about
+# /about
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "XP STARS — бот с реферальной системой.\n"
         "Приглашай друзей, получай баллы и поднимайся в топ!"
     )
     if update.callback_query:
-        await update.callback_query.answer()
         await update.callback_query.message.reply_text(text)
     else:
         await update.message.reply_text(text)
-# Обработка нажатий на кнопки
+
+# Обработка кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -154,9 +152,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'top':
         await top(update, context)
 
-# Запуск бота
+# Запуск
 def main():
-    app = Application.builder().token("7626933309:AAHxvlLp-YnIK1hcxyDJiQaAItKA_c9C>
+    app = Application.builder().token(TOKEN).build()  # Используем токен из .env
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("profile", profile))
@@ -165,43 +163,6 @@ def main():
     app.add_handler(CommandHandler("about", about))
     app.add_handler(CallbackQueryHandler(button_handler))
     print("XP_STARS_bot запущен!")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
-
-app = Application.builder().token("7626933309:AAHxvlLp-YnIK1hcxyDJiQaAItKA_c9C").build()
-
-# Команда для стартового сообщения с кнопками
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("Приглашение", callback_data='invite')],
-        [InlineKeyboardButton("ТОП", callback_data='top')],
-        [InlineKeyboardButton("Профиль", callback_data='profile')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        'Добро пожаловать в XP STARS! Выберите одну из опций:',
-        reply_markup=reply_markup
-    )
-# Обработчик кнопок
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == 'invite':
-        await query.edit_message_text(text="Вот ваша реферальная ссылка!")
-    elif query.data == 'top':
-        await query.edit_message_text(text="ТОП игроков!")
-    elif query.data == 'profile':
-        await query.edit_message_text(text="Ваш профиль.")
-
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
     app.run_polling()
 
 if __name__ == "__main__":
