@@ -37,7 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     if cursor.fetchone() is None:
         cursor.execute(
-            "INSERT INTO users (user_id, referred_by, points, name) VALUES (?, ?, >
+            "INSERT INTO users (user_id, referred_by, points, name) VALUES (?, ?, >"
             (user_id, referrer, 0, name)
         )
         if referrer:
